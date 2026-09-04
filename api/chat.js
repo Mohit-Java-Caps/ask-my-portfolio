@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   }
 
   const sources = retrieve(message, corpus, 4);
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY?.trim();
 
   // Graceful degradation: no key configured (e.g. a local clone with no
   // secrets set up yet) still returns a real, grounded answer — just
@@ -64,8 +64,17 @@ export default async function handler(req, res) {
       const errText = await groqRes.text();
       console.error("Groq API error:", groqRes.status, errText);
       // TEMP: surfacing the real provider error for debugging. Reverts to a
-      // generic message once the root cause is confirmed.
-      return res.status(502).json({ error: "The model backend failed.", debug: { status: groqRes.status, body: errText } });
+      // generic message once the root cause is confirmed. Key itself is
+      // never fully exposed — only its length and first/last 3 characters.
+      return res.status(502).json({
+        error: "The model backend failed.",
+        debug: {
+          status: groqRes.status,
+          body: errText,
+          keyLength: apiKey.length,
+          keyPreview: `${apiKey.slice(0, 3)}...${apiKey.slice(-3)}`,
+        },
+      });
     }
 
     const data = await groqRes.json();
