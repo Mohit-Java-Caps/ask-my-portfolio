@@ -63,7 +63,9 @@ export default async function handler(req, res) {
     if (!groqRes.ok) {
       const errText = await groqRes.text();
       console.error("Groq API error:", groqRes.status, errText);
-      return res.status(502).json({ error: "The model backend failed. Try again in a moment." });
+      // TEMP: surfacing the real provider error for debugging. Reverts to a
+      // generic message once the root cause is confirmed.
+      return res.status(502).json({ error: "The model backend failed.", debug: { status: groqRes.status, body: errText } });
     }
 
     const data = await groqRes.json();
