@@ -3,7 +3,9 @@ import { retrieve } from "../lib/retrieval.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../lib/prompt.js";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama-3.1-8b-instant";
+// Groq's hosted-model lineup changes over time — verify against
+// console.groq.com/playground if this ever needs to change again.
+const GROQ_MODEL = "openai/gpt-oss-20b";
 const MAX_MESSAGE_LENGTH = 500;
 
 const setCors = (res) => {
@@ -63,18 +65,7 @@ export default async function handler(req, res) {
     if (!groqRes.ok) {
       const errText = await groqRes.text();
       console.error("Groq API error:", groqRes.status, errText);
-      // TEMP: surfacing the real provider error for debugging. Reverts to a
-      // generic message once the root cause is confirmed. Key itself is
-      // never fully exposed — only its length and first/last 3 characters.
-      return res.status(502).json({
-        error: "The model backend failed.",
-        debug: {
-          status: groqRes.status,
-          body: errText,
-          keyLength: apiKey.length,
-          keyPreview: `${apiKey.slice(0, 3)}...${apiKey.slice(-3)}`,
-        },
-      });
+      return res.status(502).json({ error: "The model backend failed. Try again in a moment." });
     }
 
     const data = await groqRes.json();
