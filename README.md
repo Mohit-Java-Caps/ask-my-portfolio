@@ -2,7 +2,7 @@
 
 A retrieval-augmented generation (RAG) chatbot embedded in a portfolio site. A recruiter can ask "What did Mohit build at NextEra Energy?" or "Is he open to contract roles?" and get an answer grounded in his real, resume-verified data — not a generic canned bot, and not a hallucinated one.
 
-**Live demo:** _add your Vercel URL here once deployed_
+**Live demo:** https://ask-my-portfolio-khaki.vercel.app/
 
 ![Conversation](docs/screenshots/04-full-conversation.png)
 
