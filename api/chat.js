@@ -54,8 +54,8 @@ export default async function handler(req, res) {
       sources = await retrieveSemantic(message, corpus, hfKey, 4);
       retrieval = "semantic";
     } catch (err) {
-      console.error("Semantic retrieval failed, falling back to TF-IDF:", err.message);
-      semanticError = err.message;
+      console.error("Semantic retrieval failed, falling back to TF-IDF:", err.message, err.cause);
+      semanticError = `${err.message} | cause: ${err.cause?.message || err.cause || "none"}`;
       sources = retrieve(message, corpus, 4);
     }
   } else {
