@@ -2,7 +2,7 @@
 
 ## The 30-second version
 
-"I built a RAG chatbot embedded in my portfolio, so recruiters can ask natural-language questions about my experience and get answers grounded in my actual resume data — not a generic bot, and not something that can hallucinate, because it only answers from retrieved context. It's a React frontend, a Vercel serverless function for the backend, TF-IDF retrieval over a small knowledge base, and Groq's Llama 3.1 for generation."
+"I built a RAG chatbot embedded in my portfolio, so recruiters can ask natural-language questions about my experience and get answers grounded in my actual resume data — not a generic bot, and not something that can hallucinate, because it only answers from retrieved context. It's a React frontend, a Vercel serverless function for the backend, TF-IDF retrieval over a small knowledge base, and an open-weight model (gpt-oss-20b) served via Groq for generation."
 
 Say that. Then let them ask follow-ups — the rest of this doc is your ammunition.
 
@@ -11,7 +11,7 @@ Say that. Then let them ask follow-ups — the rest of this doc is your ammuniti
 1. **The problem.** A portfolio can show projects, but a recruiter often wants to ask something specific — "does he know Kafka," "what's his notice period" — that isn't naturally a section on a page. I built a chatbot that answers exactly those questions, grounded in real data.
 2. **How a question gets answered.** The message hits a serverless function. I score every chunk in a small knowledge base against the question using TF-IDF — classic information-retrieval math, term frequency weighted by how rare a word is across the corpus — and take the top 4 matches by cosine similarity.
 3. **Why not just ask an LLM directly?** Because it would hallucinate specifics — wrong dates, invented numbers. RAG constrains it: the system prompt tells the model to answer *only* from the retrieved context, and if nothing relevant was retrieved, to say so and point to my email instead of guessing.
-4. **Generation.** The question plus the retrieved chunks go to Groq's Llama 3.1 model. I picked Groq specifically because it's fast and has a genuinely free tier — I wanted anyone to be able to clone the repo and run it with zero cost.
+4. **Generation.** The question plus the retrieved chunks go to `gpt-oss-20b`, an open-weight model served via Groq's API. I picked Groq specifically because it's fast and has a genuinely free tier — I wanted anyone to be able to clone the repo and run it with zero cost. (I originally used a Llama 3.1 model on Groq; Groq later deprecated the Llama chat models, so I switched to gpt-oss-20b — a good example of why I don't hardcode assumptions about a third-party API's model catalog staying fixed.)
 5. **Graceful degradation.** If no API key is configured, the app doesn't break — it just returns the top retrieved chunk directly instead of a generated sentence. I built that in deliberately so the project works out of the box for anyone who forks it, and it's a real production pattern: never let an optional dependency become a hard failure.
 
 ## Likely interviewer questions, and how to answer them

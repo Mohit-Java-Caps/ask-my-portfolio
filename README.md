@@ -22,7 +22,7 @@ TF-IDF retrieval over a fixed knowledge base   (lib/retrieval.js)
 Prompt assembly: system instructions + retrieved context   (lib/prompt.js)
      │
      ▼
-Groq (Llama 3.1) generates the answer, grounded only in that context
+Groq (gpt-oss-20b) generates the answer, grounded only in that context
      │
      ▼
 Response + source tags returned to the UI
@@ -53,7 +53,7 @@ The knowledge base is ~25 short chunks. A classic TF-IDF/cosine-similarity retri
 - **Frontend:** React 19 + Vite + Tailwind CSS v4
 - **Backend:** Vercel serverless function (Node.js), no separate server to manage
 - **Retrieval:** hand-rolled TF-IDF/cosine-similarity (see above — a deliberate choice, not a missing feature)
-- **Generation:** [Groq](https://groq.com) API, `llama-3.1-8b-instant` — fast, free tier, no credit card
+- **Generation:** [Groq](https://groq.com) API, `openai/gpt-oss-20b` — fast, free tier, no credit card
 - **Knowledge base:** `lib/corpus.js` — structured chunks sourced from the same verified data as [the main portfolio](https://mohit-java-caps.github.io/mohit-portfolio/)
 
 ## Running locally

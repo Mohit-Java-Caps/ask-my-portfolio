@@ -23,7 +23,7 @@
        │                          as "extractive"       lib/prompt.js
        │                          answer directly                │
        │                                       │      call Groq chat completions
-       │                                       │      (llama-3.1-8b-instant)
+       │                                       │      (openai/gpt-oss-20b)
        │                                       │                 │
        │                                       └────────┬────────┘
        │                                                │
