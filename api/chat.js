@@ -1,5 +1,6 @@
 import { corpus } from "../lib/corpus.js";
 import { retrieve } from "../lib/retrieval.js";
+import { retrieveSemantic } from "../lib/semanticRetrieval.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../lib/prompt.js";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -7,6 +8,10 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // console.groq.com/playground if this ever needs to change again.
 const GROQ_MODEL = "openai/gpt-oss-20b";
 const MAX_MESSAGE_LENGTH = 500;
+// Prior turns are for conversational memory only, not re-retrieved — cap
+// how much of them we forward so a long session can't blow up the prompt.
+const MAX_HISTORY_TURNS = 6;
+const MAX_HISTORY_CONTENT_LENGTH = 800;
 
 const setCors = (res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -14,12 +19,20 @@ const setCors = (res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 };
 
+const sanitizeHistory = (history) => {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter((h) => h && (h.role === "user" || h.role === "assistant") && typeof h.content === "string")
+    .slice(-MAX_HISTORY_TURNS)
+    .map((h) => ({ role: h.role, content: h.content.slice(0, MAX_HISTORY_CONTENT_LENGTH) }));
+};
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Use POST." });
 
-  const { message } = req.body || {};
+  const { message, history } = req.body || {};
   if (!message || typeof message !== "string" || !message.trim()) {
     return res.status(400).json({ error: "Message is required." });
   }
@@ -27,7 +40,26 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: `Keep it under ${MAX_MESSAGE_LENGTH} characters.` });
   }
 
-  const sources = retrieve(message, corpus, 4);
+  const priorTurns = sanitizeHistory(history);
+
+  // Hybrid retrieval: try semantic (meaning-based) matching first, fall
+  // back to TF-IDF (word-based) if no key is configured or the call
+  // fails for any reason. Never a hard dependency.
+  const hfKey = process.env.HF_API_KEY?.trim();
+  let sources;
+  let retrieval = "lexical";
+  if (hfKey) {
+    try {
+      sources = await retrieveSemantic(message, corpus, hfKey, 4);
+      retrieval = "semantic";
+    } catch (err) {
+      console.error("Semantic retrieval failed, falling back to TF-IDF:", err.message);
+      sources = retrieve(message, corpus, 4);
+    }
+  } else {
+    sources = retrieve(message, corpus, 4);
+  }
+
   const apiKey = process.env.GROQ_API_KEY?.trim();
 
   // Graceful degradation: no key configured (e.g. a local clone with no
@@ -41,6 +73,7 @@ export default async function handler(req, res) {
       answer,
       sources: sources.map(({ id, category, score }) => ({ id, category, score: Number(score.toFixed(3)) })),
       mode: "extractive",
+      retrieval,
     });
   }
 
@@ -57,6 +90,7 @@ export default async function handler(req, res) {
         max_tokens: 300,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
+          ...priorTurns,
           { role: "user", content: buildUserPrompt(message, sources) },
         ],
       }),
@@ -75,6 +109,7 @@ export default async function handler(req, res) {
       answer,
       sources: sources.map(({ id, category, score }) => ({ id, category, score: Number(score.toFixed(3)) })),
       mode: "generated",
+      retrieval,
     });
   } catch (err) {
     console.error("Chat handler error:", err);

@@ -74,6 +74,12 @@ const ChatWidget = () => {
     const question = text.trim();
     if (!question || loading) return;
 
+    // Prior turns give the model conversational memory across follow-ups;
+    // retrieval itself still runs fresh against the latest question only.
+    const history = messages
+      .filter((m) => !m.error)
+      .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.text }));
+
     setMessages((m) => [...m, { role: "user", text: question }]);
     setInput("");
     setLoading(true);
@@ -82,7 +88,7 @@ const ChatWidget = () => {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: question }),
+        body: JSON.stringify({ message: question, history }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong.");
