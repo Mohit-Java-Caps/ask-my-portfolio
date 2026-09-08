@@ -48,22 +48,17 @@ export default async function handler(req, res) {
   const hfKey = process.env.HF_API_KEY?.trim();
   let sources;
   let retrieval = "lexical";
-  let semanticError = null;
   if (hfKey) {
     try {
       sources = await retrieveSemantic(message, corpus, hfKey, 4);
       retrieval = "semantic";
     } catch (err) {
       console.error("Semantic retrieval failed, falling back to TF-IDF:", err.message, err.cause);
-      semanticError = `${err.message} | cause: ${err.cause?.message || err.cause || "none"}`;
       sources = retrieve(message, corpus, 4);
     }
   } else {
     sources = retrieve(message, corpus, 4);
   }
-  // TEMPORARY: surface the raw failure reason for live debugging. Remove
-  // once semantic retrieval is confirmed working end to end.
-  const debug = req.body?.debug === true;
 
   const apiKey = process.env.GROQ_API_KEY?.trim();
 
@@ -79,7 +74,6 @@ export default async function handler(req, res) {
       sources: sources.map(({ id, category, score }) => ({ id, category, score: Number(score.toFixed(3)) })),
       mode: "extractive",
       retrieval,
-      ...(debug && semanticError ? { semanticError } : {}),
     });
   }
 
@@ -116,7 +110,6 @@ export default async function handler(req, res) {
       sources: sources.map(({ id, category, score }) => ({ id, category, score: Number(score.toFixed(3)) })),
       mode: "generated",
       retrieval,
-      ...(debug && semanticError ? { semanticError } : {}),
     });
   } catch (err) {
     console.error("Chat handler error:", err);

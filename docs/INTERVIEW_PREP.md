@@ -35,6 +35,9 @@ Say that. Then let them ask follow-ups — the rest of this doc is your ammuniti
 **"What was the hardest part?"**
 > "Keeping the retrieval honest even while upgrading it. It's easy to build a chatbot that sounds confident; it's harder to build one that reliably says 'I don't know' instead of inventing an answer when the underlying data doesn't cover the question — and when I swapped in a second retrieval method, I had to make sure that discipline held on both the semantic path and the TF-IDF fallback, not just the one I was actively testing."
 
+**"Tell me about a time a third-party API surprised you."**
+> "Rolling out semantic retrieval, actually. I wired it up against Hugging Face's documented Inference API endpoint, and in production it failed outright — DNS didn't even resolve for that subdomain, because Hugging Face had migrated to a new router endpoint since the docs I'd used were written. I fixed the URL, redeployed, and hit a second failure: their newer API requires a fine-grained token with an explicit 'Inference Providers' permission — a plain Read token, which is what their older docs describe, gets a 403. I added a temporary debug flag to my own API response to surface the real error message instead of guessing, fixed both issues one at a time, then removed the debug code once it was confirmed working. The bigger point: neither failure ever broke the chatbot for a real visitor, because the whole design point of the TF-IDF fallback is that an upstream dependency failing degrades quality, not availability."
+
 ## What you should NOT claim
 
 - Don't say retrieval is "always" semantic — it's semantic when `HF_API_KEY` is configured and the call succeeds, otherwise it silently falls back to TF-IDF. The response includes a `retrieval` field (`"semantic"` or `"lexical"`) if you want to point to proof.

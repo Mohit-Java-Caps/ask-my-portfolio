@@ -73,6 +73,8 @@ This is the core anti-hallucination mechanism: the system prompt (`lib/prompt.js
 
 `transformers.js` (an embedding model running directly inside the serverless function via ONNX Runtime) was considered, but a Vercel Node function is a poor place for it: the model weights would need to download on every cold start, and the ONNX runtime's native bindings add real bundle-size and cold-start risk on a platform with a function-size ceiling. Calling a hosted sentence-similarity endpoint keeps `api/chat.js` a thin, fast function and moves the actual model inference to infrastructure built for it — at the cost of one extra network hop and a dependency on Hugging Face's uptime, which is exactly why it's wrapped in a try/catch that falls back to TF-IDF rather than failing the request.
 
+Shipping this surfaced a real example of that dependency risk: Hugging Face had deprecated the classic `api-inference.huggingface.co` subdomain in favor of a unified `router.huggingface.co` endpoint, and their newer API also requires a fine-grained token with an explicit "Make calls to Inference Providers" permission — a plain Read token gets a 403. Both were caught via a live deployed test, not a local one (see `docs/INTERVIEW_PREP.md`), and neither one broke the app while being diagnosed, because the TF-IDF fallback kept answering questions the whole time.
+
 ## Known limitations (stated deliberately, not hidden)
 
 - **TF-IDF, the fallback path, is lexical, not semantic.** It matches on shared words/roots, not meaning, so a question phrased very differently from the corpus wording may retrieve a weaker match. This only matters when semantic retrieval isn't available (no `HF_API_KEY`, or the Hugging Face call failed) — it's a deliberate safety net, not the primary path.
